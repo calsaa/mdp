@@ -10,11 +10,19 @@ def run_camera_thread():
     cam.start()
 
     while True:
+        # Wait for STM32 to signal an object detection
         if bus.trigger_camera.is_set():
             filename = "/tmp/capture.jpg"
             cam.capture_file(filename)
+            
+            # Send the image to the server
             with open(filename, "rb") as f:
-                r = requests.post(SERVER, files={"file": f}, timeout=5)
-            bus.to_android.put(r.json())  # forward result to Android
-            bus.trigger_camera.clear()
-        time.sleep(0.1)
+                try:
+                    r = requests.post(SERVER, files={"file": f}, timeout=5)
+                    bus.to_android.put(r.json())  # Forward server result to Android
+                except requests.RequestException as e:
+                    print(f"[Camera] Error sending image: {e}")
+            
+            bus.trigger_camera.clear()  # Reset event for next detection
+
+        time.sleep(0.05)  # avoid busy loop

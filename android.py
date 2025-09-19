@@ -1,7 +1,7 @@
 import os, bluetooth
 from . import bus
+UUID = os.getenv("BT_UUID", "00001101-0000-1000-8000-00805F9B34FB")
 
-UUID = os.getenv("BT_UUID", "94f39d29-7d6d-437d-973b-fba39e49d4ee")
 
 def run_android_thread():
     server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
@@ -31,7 +31,7 @@ def run_android_thread():
             msg = data.decode("utf-8").strip()
             print(f"[Android -> RPi] {msg}")
 
-            if msg == "CAPTURE":
+            if msg == "OBJECT":
                 bus.trigger_camera.set()
             else:
                 bus.to_stm32.put(msg)  # forward commands to STM32
