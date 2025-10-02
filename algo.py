@@ -34,7 +34,7 @@ def run_algo_thread():
 			if test["value"]["initial_position"] and test["value"]["obstacles"] and finish:
 				finish = False
 				try:
-					r = requests.post(SERVER,json=test,timeout=5)
+					r = requests.post(SERVER,json=test,timeout=120)
 					print(r.text)
 					try:
 						msg=r.json()
