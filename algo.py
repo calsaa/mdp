@@ -9,6 +9,8 @@ import bus
 
 SERVER = os.getenv("SERVER_URL", "http://192.168.40.11:8000/algo/live")
 
+finish = False
+
 def run_algo_thread():
 	print("[Algo] Algo thread started")
 	try:
@@ -27,10 +29,10 @@ def run_algo_thread():
 				print("test obstacle")
 				test["value"]["obstacles"] = data
 			if "FINISH" in data:
-				print("[Algo] Shutting down")
-				break
+				finish = True
 			print("Algo receives:",test)
-			if test["value"]["initial_position"] and test["value"]["obstacles"]:
+			if test["value"]["initial_position"] and test["value"]["obstacles"] and finish:
+				finish = False
 				try:
 					r = requests.post(SERVER,json=test,timeout=5)
 					print(r.text)

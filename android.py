@@ -52,7 +52,7 @@ def receive_thread(client_sock):
                 #print("Android->Algo",robotstart)
                 if robotstart:
                    bus.to_algo.put(robotstart)
-            elif "FINISH" in msg:
+            elif "FINISHED" in msg:
                 bus.to_algo.put(msg)
             elif msg == "TASK 1 START":
                 bus.task_1_started.set()
