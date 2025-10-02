@@ -9,3 +9,8 @@ to_android = queue.Queue()
 
 # Queue for sending commands to STM32
 to_stm32 = queue.Queue()
+
+# Queue for sending commands to Algo
+to_algo = queue.Queue()
+
+snap_obstacle_id = queue.Queue()

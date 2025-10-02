@@ -1,11 +1,12 @@
 import os
 import requests
 import time
+import json
 from picamera import PiCamera
 from picamera.array import PiRGBArray
 import bus
 
-SERVER = os.getenv("SERVER_URL", "http://127.0.0.1:5000/docs")
+SERVER = os.getenv("SERVER_URL", "http://192.168.40.14:8000/image")
 
 def run_camera_thread():
     cam = PiCamera()
@@ -26,7 +27,18 @@ def run_camera_thread():
                 with open(filename, "rb") as f:
                     try:
                         r = requests.post(SERVER, files={"file": f}, timeout=5)
-                        bus.to_android.put(r.json())  # Forward server result to Android
+                        print("SENT")
+                        print(r.text)
+                        try:
+                            data = r.json()
+                        except ValueError:
+                            data = json.loads(r.text)
+                        target_value = data.get("target",None)
+                        print("Target:",target_value)
+                        target_msg = "TARGET, " + bus.snap_obstacle_id.get() + ", " + str(target_value)
+                        bus.to_android.put(target_msg)  # Forward server result to Android
+
+                        #bus.to_stm32.put(target_value)
                     except requests.RequestException as e:
                         print("[Camera] Error sending image: {}".format(e))
 
