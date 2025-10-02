@@ -1,6 +1,9 @@
 import threading
 import queue
 
+# Event to signal start of Task 1
+task_1_started = threading.Event()
+
 # Event to trigger camera capture
 trigger_camera = threading.Event()
 

@@ -8,6 +8,7 @@ obstacle_messages = []
 robotstart = ""
 
 def receive_thread(client_sock):
+    task_1_started = False
     try:
         while True:
             # receive from Android
@@ -53,6 +54,9 @@ def receive_thread(client_sock):
                    bus.to_algo.put(robotstart)
             elif "FINISH" in msg:
                 bus.to_algo.put(msg)
+            elif msg == "TASK 1 START":
+                bus.task_1_started.set()
+                print("Task 1 started!")
             else:
                 bus.to_stm32.put(msg)  # forward commands to STM32
 #               bus.to_algo.put(msg)
