@@ -1,5 +1,5 @@
 import json
-import os, bluetooth
+import os, bluetooth, threading, time
 import bus
 import math
 import socket
@@ -7,41 +7,15 @@ UUID = os.getenv("BT_UUID", "00001101-0000-1000-8000-00805F9B34FB")
 obstacle_messages = []
 robotstart = ""
 
-def run_android_thread():
-    server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-    server_sock.bind(("", bluetooth.PORT_ANY))
-    server_sock.listen(1)
-    port = server_sock.getsockname()[1]
-    bluetooth.advertise_service(
-        server_sock,
-        "RpiAndroidService",
-        service_id=UUID,
-        service_classes=[UUID, bluetooth.SERIAL_PORT_CLASS],
-        profiles=[bluetooth.SERIAL_PORT_PROFILE]
-    )
-
-    print(f"[Android] Waiting for connection on RFCOMM channel {port}...")
-
-    client_sock, client_info = server_sock.accept()
-    print(f"[Android] Connected from {client_info}")
-    #first_run = True
-#    client_sock.setblocking(False)
+def receive_thread(client_sock):
     try:
         while True:
             # receive from Android
-            try:
-                client_sock.settimeout(3)
-                data = client_sock.recv(1024)
-                print(data)
-           # first_run = False
-           # if not data:
-                #break
-            except socket.timeout:
-                pass
-            msg = ""
-            if data:
-                msg = data.decode("utf-8").strip()
-                print(f"[Android -> RPi] {msg}")
+            data = client_sock.recv(1024)
+            if not data:
+                break
+            msg = data.decode("utf-8").strip()
+            print(f"[Android -> RPi] {msg}")
 
             if msg == "OBJECT":
                 bus.trigger_camera.set()
@@ -62,7 +36,6 @@ def run_android_thread():
                       print("Added",msg,"to Obstacle List")
                 elif "ROBOT" in msg:
                    parts = msg.split(",")
-                   # robot = {"x":int(parts[1]), "y":int(parts[2]), "d":parts[3]}
                    radian_direction = 1.57
                    if parts[3] == 'E':
                         radian_direction = 3.14
@@ -71,10 +44,7 @@ def run_android_thread():
                    elif parts[3] == 'W':
                         radian_direction  = 0
                    robot = {"x":int(parts[1]), "y":int(parts[2]), "d":radian_direction}
-                   # robotstart.append(robot)
                    robotstart = robot
-#                obstacles=[json.loads(item) for item in obstacle_messages]
- #               print(type(obstacles))
                 if obstacle_messages:
                    bus.to_algo.put(obstacle_messages)
                 #print("Android->Algo",bus.to_algo.get())
@@ -88,14 +58,47 @@ def run_android_thread():
 #               bus.to_algo.put(msg)
                 print("[Android->STM]", msg)
 
-            # send queued messages back to Android
+    except OSError:
+        pass
+
+def run_android_thread():
+    server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+    server_sock.bind(("", bluetooth.PORT_ANY))
+    server_sock.listen(1)
+    port = server_sock.getsockname()[1]
+    bluetooth.advertise_service(
+        server_sock,
+        "RpiAndroidService",
+        service_id=UUID,
+        service_classes=[UUID, bluetooth.SERIAL_PORT_CLASS],
+        profiles=[bluetooth.SERIAL_PORT_PROFILE]
+    )
+
+    print(f"[Android] Waiting for connection on RFCOMM channel {port}...")
+
+    client_sock, client_info = server_sock.accept()
+    print(f"[Android] Connected from {client_info}")
+    
+    recv_thread = threading.Thread(target=receive_thread, args=(client_sock,))
+    recv_thread.daemon = True
+    recv_thread.start()
+    #first_run = True
+#    client_sock.setblocking(False)
+
+    try:
+        while True:
             if not bus.to_android.empty():
                 print("android bus not empty")
                 reply = bus.to_android.get()
                 client_sock.send(str(reply).encode("utf-8"))
-
+                
+            if not recv_thread.is_alive():
+                break
+            
+            time.sleep(0.1)
     except OSError:
         pass
+    
 
     print("[Android] Disconnected")
     client_sock.close()

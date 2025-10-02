@@ -15,7 +15,7 @@ def run_stm32_thread():
             if "OBJECT" in line:
                 bus.snap_obstacle_id.put(1)
                 bus.trigger_camera.set()
-            if "ACK" in line or first_command:
+            if "FIN" in line or first_command:
                 if not bus.to_stm32.empty():
                    if first_command:
                       first_command = False
@@ -29,16 +29,18 @@ def run_stm32_thread():
                          android_cmd = bus.to_stm32.get()
                          print(f"sending {android_cmd} to android")
                          bus.to_android.put(android_cmd)
+#                         time.sleep(2)
                    else:
                       print("sending snap to bus")
                       bus.snap_obstacle_id.put(cmd[4])
                       bus.trigger_camera.set()
                       first_command = True
+                  # time.sleep(3)
             else :
                    continue
-#        if not bus.to_stm32.empty():
-#            cmd = bus.to_stm32.get()
-#            ser.write((cmd + "\n").encode())
+        if not bus.to_stm32.empty():
+            cmd = bus.to_stm32.get()
+            ser.write((cmd + "\n").encode())
 
         time.sleep(0.01)
 
