@@ -6,7 +6,7 @@ from picamera import PiCamera
 from picamera.array import PiRGBArray
 import bus
 
-SERVER = os.getenv("SERVER_URL", "http://192.168.40.30:8000/image")
+SERVER = os.getenv("SERVER_URL", "http://192.168.40.14:8000/image")
 
 def run_camera_thread():
     cam = PiCamera()
@@ -20,7 +20,8 @@ def run_camera_thread():
         while True:
             # Wait for STM32 to signal an object detection
             if bus.trigger_camera.is_set():
-                filename = "/tmp/capture.jpg"
+                target_id = bus.snap_obstacle_id.get()
+                filename = f"/tmp/capture_{target_id}.jpg"
                 cam.capture(filename)  # Capture image to file
 
                 # Send the image to the server
@@ -35,7 +36,7 @@ def run_camera_thread():
                             data = json.loads(r.text)
                         target_value = data.get("target",None)
                         print("Target:",target_value)
-                        target_msg = "TARGET, " + bus.snap_obstacle_id.get() + ", " + str(target_value)+ "\n"
+                        target_msg = "TARGET, " + str(target_id) + ", " + str(target_value)+ "\n"
                         bus.to_android.put(target_msg)  # Forward server result to Android
 
                         #bus.to_stm32.put(target_value)
